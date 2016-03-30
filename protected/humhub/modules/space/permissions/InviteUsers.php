@@ -23,7 +23,7 @@ class InviteUsers extends \humhub\libs\BasePermission
         Space::USERGROUP_OWNER,
         Space::USERGROUP_ADMIN,
         Space::USERGROUP_MODERATOR,
-        Space::USERGROUP_MEMBER,
+        #Space::USERGROUP_MEMBER,
     ];
 
     /**
