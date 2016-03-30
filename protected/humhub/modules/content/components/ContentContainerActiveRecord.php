@@ -166,7 +166,7 @@ class ContentContainerActiveRecord extends ActiveRecord
      */
     public function getContentContainerRecord()
     {
-        return $this->hasOne(ContentContainer::className(), ['id' => 'content_container_id']);
+        return $this->hasOne(ContentContainer::className(), ['id' => 'contentcontainer_id']);
     }
 
     public function getPermissionManager()
