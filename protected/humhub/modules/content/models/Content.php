@@ -259,12 +259,13 @@ class Content extends \humhub\components\ActiveRecord
      * Checks if the given / or current user can delete this content.
      * Currently only the creator can remove.
      *
-     * @todo Ask the underlying "real" content for deletion?
-     *
      * @param type $userId
      */
     public function canDelete($userId = "")
     {
+        $object = $this->getPolymorphicRelation();
+        if (method_exists($object,'canDelete') && !$object->canDelete($userId))
+            return false;
 
         if ($userId == "")
             $userId = Yii::$app->user->id;
@@ -348,6 +349,10 @@ class Content extends \humhub\components\ActiveRecord
      */
     public function canWrite($userId = "")
     {
+        $object = $this->getPolymorphicRelation();
+        if (method_exists($object,'canWrite') && !$object->canWrite($userId))
+            return false;
+
         if ($userId == "")
             $userId = Yii::$app->user->id;
 
