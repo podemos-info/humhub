@@ -1,5 +1,5 @@
 <?php
 return array (
-  '<strong>Statistic</strong> settings' => '<strong>Statistik</strong> Einstellungen',
   'Save' => 'Speichern',
+  'You can add an statistics HTML code snippet - which will added to all rendered pags.' => 'Du kannst HTML Code für Statistiken hinzufügen, der zu allen generierten Seiten hinzugefügt wird.',
 );

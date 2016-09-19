@@ -20,6 +20,8 @@ use humhub\modules\user\models\User;
  */
 class UserSearch extends User
 {
+    
+    public $query;
 
     public function attributes()
     {
@@ -30,7 +32,7 @@ class UserSearch extends User
     public function rules()
     {
         return [
-            [['id', 'super_admin'], 'integer'],
+            [['id'], 'integer'],
             [['username', 'email', 'created_at', 'profile.firstname', 'profile.lastname', 'last_login'], 'safe'],
         ];
     }
@@ -53,7 +55,7 @@ class UserSearch extends User
      */
     public function search($params)
     {
-        $query = User::find()->joinWith('profile');
+        $query = ($this->query == null) ? User::find()->joinWith('profile') : $this->query;
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
@@ -65,8 +67,7 @@ class UserSearch extends User
                 'id',
                 'username',
                 'email',
-                'super_admin',
-        		'last_login',
+        	'last_login',
                 'profile.firstname',
                 'profile.lastname',
                 'created_at',
@@ -81,16 +82,16 @@ class UserSearch extends User
         }
 
         $query->andFilterWhere(['id' => $this->id]);
-        $query->andFilterWhere(['super_admin' => $this->super_admin]);
-        $query->andFilterWhere(['like', 'id', $this->id]);
-        $query->andFilterWhere(['like', 'username', $this->username]);
-        $query->andFilterWhere(['like', 'email', $this->email]);
+        $query->andFilterWhere(['like', 'user.id', $this->id]);
+        $query->andFilterWhere(['like', 'user.username', $this->username]);
+        $query->andFilterWhere(['like', 'user.email', $this->email]);
         $query->andFilterWhere(['like', 'profile.firstname', $this->getAttribute('profile.firstname')]);
         $query->andFilterWhere(['like', 'profile.lastname', $this->getAttribute('profile.lastname')]);
         
         if ($this->getAttribute('last_login') != "") {
             try {
-                $last_login = Yii::$app->formatter->asDate($this->getAttribute('last_login'), 'php:Y-m-d');
+                $last_login = \humhub\libs\DateHelper::parseDateTime($this->getAttribute('last_login'));
+                
                 $query->andWhere([
                     '=',
                     new \yii\db\Expression("DATE(last_login)"),

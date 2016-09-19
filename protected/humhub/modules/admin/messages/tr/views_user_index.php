@@ -17,11 +17,14 @@
  * NOTE: this file must be saved in UTF-8 encoding.
  */
 return [
-    'Actions' => '',
-    'Last login' => '',
-    'never' => '',
-    '<strong>Manage</strong> users' => '<strong>Kullanıcıları</strong> yönet',
+    'Send invite' => '',
+    'Actions' => 'Eylemler',
     'Add new user' => 'Yeni kullanıcı ekle',
-    'In this overview you can find every registered user and manage him.' => 'Kayıtlı kullanıcıları bulabilir, görüntüleyebilir ve yönetebilirsiniz.',
+    'Group Manager' => 'Grup Yöneticisi',
+    'Last login' => 'Son giriş',
     'Overview' => 'Genel Bakış',
+    'Settings' => 'Ayarlar',
+    'This overview contains a list of each registered user with actions to view, edit and delete users.' => 'Genel bakış görüntülemek için eylemler düzenleyebilir ve silebilirsiniz. Kayıtlı kullanıcı listesi içerir.',
+    'Users' => 'Kullanıcılar',
+    'never' => 'asla',
 ];

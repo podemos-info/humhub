@@ -2,6 +2,8 @@
 
 namespace humhub\widgets;
 
+use yii\helpers\Url;
+
 class BaseMenu extends \yii\base\Widget
 {
 
@@ -10,19 +12,19 @@ class BaseMenu extends \yii\base\Widget
 
     /**
      *
-     * @var Array of items
+     * @var array of items
      */
     public $items = array();
 
     /**
      *
-     * @var Array of item groups
+     * @var array of item groups
      */
     public $itemGroups = array();
 
     /**
      *
-     * @var String type of the navigation, optional for identifing.
+     * @var string type of the navigation, optional for identifing.
      */
     public $type = "";
 
@@ -33,7 +35,7 @@ class BaseMenu extends \yii\base\Widget
      * - leftNavigation
      * - tabMenu
      *
-     * @var String template file
+     * @var string template file
      */
     public $template;
 
@@ -55,7 +57,7 @@ class BaseMenu extends \yii\base\Widget
     /**
      * Adds new Item to the menu
      *
-     * @param Array $item
+     * @param array $item
      *            with item definitions
      */
     public function addItem($item)
@@ -113,7 +115,7 @@ class BaseMenu extends \yii\base\Widget
     /**
      * Adds new Item Group to the menu
      *
-     * @param Array $itemGroup
+     * @param array $itemGroup
      *            with group definition
      */
     public function addItemGroup($itemGroup)
@@ -139,9 +141,9 @@ class BaseMenu extends \yii\base\Widget
     /**
      * Returns Items of this Navigation
      *
-     * @param String $group
+     * @param string $group
      *            limits the items to a specified group
-     * @return Array a list of items with definition
+     * @return array a list of items with definition
      */
     public function getItems($group = "")
     {
@@ -195,7 +197,7 @@ class BaseMenu extends \yii\base\Widget
     /**
      * Returns all Item Groups
      *
-     * @return Array of item group definitions
+     * @return array of item group definitions
      */
     public function getItemGroups()
     {
@@ -211,37 +213,66 @@ class BaseMenu extends \yii\base\Widget
         $this->trigger(self::EVENT_RUN);
         return $this->render($this->template, array());
     }
-
+    
     /**
-     * Add the active class from a menue item.
-     * 
-     * @param String $url
-     *            the URL of the item to mark. You can use Url::toRoute(...) to generate it.
+     * Activates the menu item with the given url
+     * @param type $url
      */
-    public function markAsActive($url)
+    public function setActive($url)
     {
         foreach ($this->items as $key => $item) {
             if ($item['url'] == $url) {
                 $this->items[$key]['htmlOptions']['class'] = 'active';
-                $this->items[$key]['htmlOptions']['isActive'] = true;
+                $this->items[$key]['isActive'] = true;
+            }
+        }
+    }
+    
+    /*
+     * Deactivates the menu item with the given url
+     */
+    public function setInactive($url)
+    {
+        foreach ($this->items as $key => $item) {
+            if ($item['url'] == $url) {
+                $this->items[$key]['htmlOptions']['class'] = '';
+                $this->items[$key]['isActive'] = false;
             }
         }
     }
 
     /**
-     * Remove the active class from a menue item.
+     * Add the active class from a menue item.
      * 
-     * @param String $url
+     * @param string $url
      *            the URL of the item to mark. You can use Url::toRoute(...) to generate it.
      */
-    public function markAsInactive($url)
+    public static function markAsActive($url)
     {
-        foreach ($this->items as $key => $item) {
-            if ($item['url'] == $url) {
-                $this->items[$key]['htmlOptions']['class'] = '';
-                $this->items[$key]['htmlOptions']['isActive'] = false;
-            }
+        if (is_array($url)) {
+            $url = Url::to($url);
         }
+
+        \yii\base\Event::on(static::className(), static::EVENT_RUN, function($event) use($url) {
+            $event->sender->setActive($url);
+        });
+    }
+
+    /**
+     * Remove the active class from a menue item.
+     * 
+     * @param string $url
+     *            the URL of the item to mark. You can use Url::toRoute(...) to generate it.
+     */
+    public static function markAsInactive($url)
+    {
+        if (is_array($url)) {
+            $url = Url::to($url);
+        }
+        
+        \yii\base\Event::on(static::className(), static::EVENT_RUN, function($event) use($url) {
+             $event->sender->setInactive($url);
+        });
     }
 
     /**

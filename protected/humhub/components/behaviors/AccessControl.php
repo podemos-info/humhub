@@ -9,6 +9,7 @@
 namespace humhub\components\behaviors;
 
 use Yii;
+use yii\helpers\ArrayHelper;
 use yii\web\ForbiddenHttpException;
 use humhub\models\Setting;
 
@@ -28,6 +29,13 @@ class AccessControl extends \yii\base\ActionFilter
     public $guestAllowedActions = [];
 
     /**
+     * Rules for access to controller
+     *
+     * @var array
+     */
+    public $rules = [];
+
+    /**
      * Only allow admins access to this controller
      *
      * @var boolean
@@ -44,31 +52,55 @@ class AccessControl extends \yii\base\ActionFilter
      */
     public function beforeAction($action)
     {
-        
+
         $identity = Yii::$app->user->getIdentity();
         if($identity != null && !$identity->isActive()) {
             Yii::$app->user->logout();
-            Yii::$app->response->redirect(Yii::$app->urlManager->createUrl('user/auth/login'));
+            Yii::$app->response->redirect(['/user/auth/login']);
+            return false;
         }
-
+        
         if (Yii::$app->user->isGuest) {
             if (!$this->loggedInOnly && !$this->adminOnly) {
                 return true;
             }
-            if (in_array($action->id, $this->guestAllowedActions) && Setting::Get('allowGuestAccess', 'authentication_internal') == 1) {
+            if (in_array($action->id, $this->guestAllowedActions) && Yii::$app->getModule('user')->settings->get('auth.allowGuestAccess') == 1) {
                 return true;
             }
-
+            if (!empty($this->rules) && !empty($this->guestAllowedActions)) {
+                if (in_array($action->id, $this->guestAllowedActions)){
+                    return true;
+                }
+            }
             Yii::$app->user->loginRequired();
             return false;
         }
+
         if ($this->adminOnly && !Yii::$app->user->isAdmin()) {
+            $this->forbidden();
+        }
+
+        if (!empty($this->rules)) {
+            $action = Yii::$app->controller->action->id;
+            $userGroups = ArrayHelper::getColumn(ArrayHelper::toArray($identity->groups), 'name');
+            $userGroups = array_map('strtolower', $userGroups);
+            foreach ($this->rules as $rule){
+                if (!empty($rule['groups'])){
+                    $allowedGroups = array_map('strtolower', $rule['groups']);
+                    foreach ($allowedGroups as $allowedGroup){
+                        if(in_array($allowedGroup, $userGroups) && in_array($action, $rule['actions'])){
+                            return true;
+                        }
+                    }
+                }
+            }
             $this->forbidden();
         }
 
         if ($this->loggedInOnly) {
             return true;
         }
+       
         return false;
     }
 

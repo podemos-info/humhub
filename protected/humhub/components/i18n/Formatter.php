@@ -8,6 +8,7 @@
 
 namespace humhub\components\i18n;
 
+use Yii;
 use humhub\models\Setting;
 
 /**
@@ -15,6 +16,11 @@ use humhub\models\Setting;
  */
 class Formatter extends \yii\i18n\Formatter
 {
+
+    /**
+     * @inheritdoc
+     */
+    public $sizeFormatBase = 1000;
 
     /**
      * @var string the default format string to be used to format a input field [[asDate()|date]].
@@ -30,8 +36,8 @@ class Formatter extends \yii\i18n\Formatter
     {
         parent::init();
 
-        if (Setting::Get('defaultDateInputFormat', 'admin') != '') {
-            $this->dateInputFormat = Setting::Get('defaultDateInputFormat', 'admin');
+        if (Yii::$app->getModule('admin')->settings->get('defaultDateInputFormat') != '') {
+            $this->dateInputFormat = Yii::$app->getModule('admin')->settings->get('defaultDateInputFormat');
         }
     }
 

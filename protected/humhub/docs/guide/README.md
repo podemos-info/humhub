@@ -5,18 +5,19 @@ Introduction
 ------------
 * [About HumHub](intro-index.md)
 * [Licence](intro-licence.md)
+* [Bundled Software](intro-bundled_software.md)
 
-Administration
+Getting Started
 ---------------
 
 * [Requirements](admin-requirements.md)
 * [Installation](admin-installation.md)
 * [Updating](admin-updating.md)
 
-
-Administration - Topics
--------------------------
+Administration
+---------------------
 * [Advanced Configuration](admin-adv-config.md)
+* [Authentication](admin-authentication.md)
 * [Console](admin-adv-console.md)
 * [Search](admin-adv-search.md)
 * [XSendFile](admin-adv-xsendfile.md)
@@ -26,39 +27,26 @@ Development
 ---------------------
 
 * [Getting Started](dev-index.md)
-* [Updating / Migrate](dev-migrate.md)
-* [Environment](dev-environment.md)
-* [Contributions](dev-contributing.md)
-
-Development - Modules
----------------------
-
-* [Getting Started](dev-module-index.md)
-* [Events](dev-module-events.md)
-* [Database](dev-module-db.md)
-* [Content](dev-module-content.md)
-* [Space/User](dev-module-spaceuser.md)
-* [Navigations](dev-module-menus.md)
-* [Widget Stacks](dev-module-stack.md)
-* [Notifications](dev-module-notifications.md)
-* [Activities](dev-module-activities.md)
-* [Streams / Walls](dev-module-stream.md)
-* [Search](dev-module-search.md)
-* [Translations](dev-module-i18n.md)
-* [CronJobs](dev-module-cron.md)
-* [Console](dev-module-console.md)
-* [Special Topics](dev-module-special-topics.md)
+* [Update / Migration](dev-migrate.md)
+* [Content](dev-content.md)
+* [Permissions](dev-permissions.md)
+* [Notifications](dev-notifications.md)
+* [Activities](dev-activities.md)
+* [Streams](dev-stream.md)
+* [Events](dev-events.md)
+* [Widgets](dev-widgets.md)
+* [Internationalization](dev-i18n.md)
+* [Authentication](dev-authentication.md)
+* [Models / Database](dev-db.md)
+* [Search](dev-search.md)
+* [CronJobs](dev-cron.md)
+* [Settings and Configuration](dev-settings.md)
+* [Console Application](dev-console.md)
+* [Module Development](dev-module.md)
 
 Theming
 -------
 
 * [Getting Started](theming-index.md)
 * [Update / Migrate](theming-migrate.md)
-
-
-Special Topics
---------------
-
-* [Translations](special-translations.md)
-* [Bundled Software](special-bundled_software.md)
 

@@ -1,15 +1,22 @@
 <?php
 
+/**
+ * @link https://www.humhub.org/
+ * @copyright Copyright (c) 2016 HumHub GmbH & Co. KG
+ * @license https://www.humhub.com/licences
+ */
+
 namespace humhub\modules\space\models;
 
 use Yii;
 use humhub\modules\space\models\Membership;
 use humhub\modules\space\permissions\CreatePrivateSpace;
 use humhub\modules\space\permissions\CreatePublicSpace;
-use humhub\modules\content\models\Wall;
+use humhub\modules\space\components\UrlValidator;
 use humhub\modules\content\models\Content;
 use humhub\modules\content\components\ContentContainerActiveRecord;
 use humhub\modules\user\models\User;
+use yii\helpers\Url;
 
 /**
  * This is the model class for table "space".
@@ -19,7 +26,7 @@ use humhub\modules\user\models\User;
  * @property integer $wall_id
  * @property string $name
  * @property string $description
- * @property string $website
+ * @property string $url
  * @property integer $join_policy
  * @property integer $visibility
  * @property integer $status
@@ -68,18 +75,23 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
      */
     public function rules()
     {
-        return [
+        $rules = [
             [['join_policy', 'visibility', 'status', 'created_by', 'updated_by', 'auto_add_new_members', 'default_content_visibility'], 'integer'],
-            [['name'], 'unique', 'targetClass' => self::className()],
             [['name'], 'required'],
             [['description', 'tags', 'color'], 'string'],
             [['created_at', 'updated_at'], 'safe'],
             [['join_policy'], 'in', 'range' => [0, 1, 2]],
             [['visibility'], 'in', 'range' => [0, 1, 2]],
             [['visibility'], 'checkVisibility'],
-            [['guid', 'name', 'website'], 'string', 'max' => 45],
-            [['website'], 'url'],
+            [['url'], 'unique', 'skipOnEmpty' => 'true'],
+            [['guid', 'name', 'url'], 'string', 'max' => 45, 'min' => 2],
+            [['url'], UrlValidator::className()],
         ];
+
+        if (Yii::$app->getModule('space')->useUniqueSpaceNames) {
+            $rules[] = [['name'], 'unique', 'targetClass' => self::className()];
+        }
+        return $rules;
     }
 
     /**
@@ -89,7 +101,7 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
     {
         $scenarios = parent::scenarios();
 
-        $scenarios['edit'] = ['name', 'color', 'description', 'website', 'tags', 'join_policy', 'visibility', 'default_content_visibility'];
+        $scenarios['edit'] = ['name', 'color', 'description', 'tags', 'join_policy', 'visibility', 'default_content_visibility', 'url'];
         $scenarios['create'] = ['name', 'color', 'description', 'join_policy', 'visibility'];
 
         return $scenarios;
@@ -105,7 +117,6 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
             'name' => Yii::t('SpaceModule.models_Space', 'Name'),
             'color' => Yii::t('SpaceModule.models_Space', 'Color'),
             'description' => Yii::t('SpaceModule.models_Space', 'Description'),
-            'website' => Yii::t('SpaceModule.models_Space', 'Website URL (optional)'),
             'join_policy' => Yii::t('SpaceModule.models_Space', 'Join Policy'),
             'visibility' => Yii::t('SpaceModule.models_Space', 'Visibility'),
             'status' => Yii::t('SpaceModule.models_Space', 'Status'),
@@ -115,6 +126,7 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
             'updated_at' => Yii::t('SpaceModule.models_Space', 'Updated At'),
             'updated_by' => Yii::t('SpaceModule.models_Space', 'Updated by'),
             'ownerUsernameSearch' => Yii::t('SpaceModule.models_Space', 'Owner'),
+            'default_content_visibility' => Yii::t('SpaceModule.models_Space', 'Default content visibility'),
         );
     }
 
@@ -125,7 +137,7 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
     {
         return array(
             \humhub\components\behaviors\GUID::className(),
-            \humhub\modules\space\behaviors\SpaceSetting::className(),
+            \humhub\modules\content\components\behaviors\SettingsBehavior::className(),
             \humhub\modules\space\behaviors\SpaceModelModules::className(),
             \humhub\modules\space\behaviors\SpaceModelMembership::className(),
             \humhub\modules\user\behaviors\Followable::className(),
@@ -135,22 +147,15 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
     /**
      * @inheritdoc
      */
-    public function beforeSave($insert)
-    {
-        return parent::beforeSave($insert);
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function afterSave($insert, $changedAttributes)
     {
+        parent::afterSave($insert, $changedAttributes);
+
         Yii::$app->search->update($this);
 
         $user = \humhub\modules\user\models\User::findOne(['id' => $this->created_by]);
 
         if ($insert) {
-
             // Auto add creator as admin
             $membership = new Membership();
             $membership->space_id = $this->id;
@@ -166,8 +171,24 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
         }
 
         Yii::$app->cache->delete('userSpaces_' . $user->id);
+    }
 
-        return parent::afterSave($insert, $changedAttributes);
+    /**
+     * @inheritdoc
+     */
+    public function beforeSave($insert)
+    {
+        if ($insert) {
+            $this->url = UrlValidator::autogenerateUniqueSpaceUrl($this->name);
+        }
+
+        if ($this->url == '') {
+            $this->url = new \yii\db\Expression('NULL');
+        } else {
+            $this->url = mb_strtolower($this->url);
+        }
+
+        return parent::beforeSave($insert);
     }
 
     /**
@@ -175,10 +196,6 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
      */
     public function beforeDelete()
     {
-        foreach (Setting::findAll(['space_id' => $this->id]) as $spaceSetting) {
-            $spaceSetting->delete();
-        }
-
         foreach ($this->getAvailableModules() as $moduleId => $module) {
             if ($this->isModuleEnabled($moduleId)) {
                 $this->disableModule($moduleId);
@@ -257,34 +274,10 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
     }
 
     /**
-     * Check if current user can wri
-     * te to this workspace
-     *
-     * @param type $userId
-     * @return type
-     */
-    public function canWrite($userId = "")
-    {
-
-        // No writes allowed for archived workspaces
-        if ($this->status == Space::STATUS_ARCHIVED)
-            return false;
-
-        // Take current userid if none is given
-
-        if ($userId == "")
-            $userId = Yii::$app->user->id;
-
-        // User needs to be member to post
-        if ($this->isMember($userId))
-            return true;
-
-        return false;
-    }
-
-    /**
      * Checks if given user can invite people to this workspace
+     * Note: use directly permission instead
      *
+     * @deprecated since version 1.1
      * @return boolean
      */
     public function canInvite()
@@ -295,12 +288,14 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
     /**
      * Checks if given user can share content.
      * Shared Content is public and is visible also for non members of the space.
+     * Note: use directly permission instead
      *
+     * @deprecated since version 1.1
      * @return boolean
      */
     public function canShare()
     {
-        return $this->getPermissionManager()->can(new \humhub\modules\space\permissions\CreatePublicContent());
+        return $this->getPermissionManager()->can(new \humhub\modules\content\permissions\CreatePublicContent());
     }
 
     /**
@@ -332,7 +327,7 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
 
     /**
      * Checks if space has tags
-     * 
+     *
      * @return boolean has tags set
      */
     public function hasTags()
@@ -374,9 +369,10 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
      * See CController createUrl() for more details.
      *
      * @since 0.9
-     * @param type $route the URL route.
-     * @param type $params additional GET parameters.
-     * @param type $ampersand the token separating name-value pairs in the URL.
+     * @param string $route the URL route.
+     * @param array $params additional GET parameters.
+     * @param boolean|string $scheme whether to create an absolute URL and if it is a string, the scheme (http or https) to use.
+     * @return string
      */
     public function createUrl($route = null, $params = array(), $scheme = false)
     {
@@ -389,7 +385,7 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
             $params['sguid'] = $this->guid;
         }
 
-        return \yii\helpers\Url::toRoute($params, $scheme);
+        return Url::toRoute($params, $scheme);
     }
 
     /**
@@ -414,7 +410,7 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
         }
 
         if (($visibility == self::VISIBILITY_REGISTERED_ONLY || $visibility == self::VISIBILITY_ALL) && !Yii::$app->user->permissionManager->can(new CreatePublicSpace())) {
-            $this->addError($attribute, Yii::t('SpaceModule.models_Space', 'You cannot create public visible spaces!' . $visibility));
+            $this->addError($attribute, Yii::t('SpaceModule.models_Space', 'You cannot create public visible spaces!'));
         }
     }
 
@@ -434,10 +430,10 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
      */
     public function canAccessPrivateContent(\humhub\modules\user\models\User $user = null)
     {
-        if (Yii::$app->getModule('space')->globalAdminCanAccessPrivateContent && Yii::$app->user->getIdentity()->super_admin === 1) {
+        if (Yii::$app->getModule('space')->globalAdminCanAccessPrivateContent && Yii::$app->user->getIdentity()->isSystemAdmin()) {
             return true;
         }
-        
+
         return ($this->isMember());
     }
 
@@ -457,6 +453,26 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
         return $query;
     }
 
+    public function getMembershipUser($status = null)
+    {
+        $status = ($status == null) ? Membership::STATUS_MEMBER : $status;
+        $query = User::find();
+        $query->leftJoin('space_membership', 'space_membership.user_id=user.id AND space_membership.space_id=:space_id AND space_membership.status=:member', ['space_id' => $this->id, 'member' => $status]);
+        $query->andWhere('space_membership.space_id IS NOT NULL');
+        $query->addOrderBy(['space_membership.group_id' => SORT_DESC]);
+        return $query;
+    }
+
+    public function getNonMembershipUser()
+    {
+        $query = User::find();
+        $query->leftJoin('space_membership', 'space_membership.user_id=user.id AND space_membership.space_id=:space_id ', ['space_id' => $this->id]);
+        $query->andWhere('space_membership.space_id IS NULL');
+        $query->orWhere(['!=', 'space_membership.status', Membership::STATUS_MEMBER]);
+        $query->addOrderBy(['space_membership.group_id' => SORT_DESC]);
+        return $query;
+    }
+
     public function getApplicants()
     {
         $query = $this->hasMany(Membership::className(), ['space_id' => 'id']);
@@ -472,15 +488,15 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
     public function getUserGroups()
     {
         $groups = [
-            self::USERGROUP_OWNER => 'Owner',
-            self::USERGROUP_ADMIN => 'Administrators',
-            self::USERGROUP_MODERATOR => 'Moderators',
-            self::USERGROUP_MEMBER => 'Members',
-            self::USERGROUP_USER => 'Users'
+            self::USERGROUP_OWNER => Yii::t('SpaceModule.models_Space', 'Owner'),
+            self::USERGROUP_ADMIN => Yii::t('SpaceModule.models_Space', 'Administrators'),
+            self::USERGROUP_MODERATOR => Yii::t('SpaceModule.models_Space', 'Moderators'),
+            self::USERGROUP_MEMBER => Yii::t('SpaceModule.models_Space', 'Members'),
+            self::USERGROUP_USER => Yii::t('SpaceModule.models_Space', 'Users')
         ];
 
         // Add guest groups if enabled
-        if (\humhub\models\Setting::Get('allowGuestAccess', 'authentication_internal')) {
+        if (Yii::$app->getModule('user')->settings->get('auth.allowGuestAccess')) {
             $groups[self::USERGROUP_GUEST] = 'Guests';
         }
 
@@ -515,7 +531,7 @@ class Space extends ContentContainerActiveRecord implements \humhub\modules\sear
     public function getDefaultContentVisibility()
     {
         if ($this->default_content_visibility === null) {
-            $globalDefault = \humhub\models\Setting::Get('defaultContentVisibility', 'space');
+            $globalDefault = Yii::$app->getModule('space')->settings->get('defaultContentVisibility');
             if ($globalDefault == Content::VISIBILITY_PUBLIC) {
                 return Content::VISIBILITY_PUBLIC;
             }

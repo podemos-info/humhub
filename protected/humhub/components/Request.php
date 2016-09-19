@@ -12,8 +12,8 @@ use Yii;
 
 /**
  * @inheritdoc
- * 
- * 
+ *
+ *
  * @author luke
  */
 class Request extends \yii\web\Request
@@ -25,11 +25,13 @@ class Request extends \yii\web\Request
     public function init()
     {
         if (\humhub\models\Setting::isInstalled()) {
-            $secret = \humhub\models\Setting::Get('secret');
+            $secret = Yii::$app->settings->get('secret');
             if ($secret != "") {
-               $this->cookieValidationKey = \humhub\models\Setting::Get('secret');
-            } 
-        } else {
+                $this->cookieValidationKey = $secret;
+            }
+        }
+
+        if ($this->cookieValidationKey == '') {
             $this->cookieValidationKey = 'installer';
         }
     }

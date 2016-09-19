@@ -52,12 +52,14 @@ class Events extends \yii\base\Object
 
         // Cancel all space memberships
         foreach (Membership::findAll(array('user_id' => $user->id)) as $membership) {
-            $membership->space->removeMember($user->id);
+            // Avoid activities
+            $membership->delete();
         }
 
         // Cancel all space invites by the user
         foreach (Membership::findAll(array('originator_user_id' => $user->id, 'status' => Membership::STATUS_INVITED)) as $membership) {
-            $membership->space->removeMember($membership->user_id);
+            // Avoid activities
+            $membership->delete();
         }
 
         return true;
@@ -92,7 +94,7 @@ class Events extends \yii\base\Object
         $integrityController->showTestHeadline("Space Module - Module (" . models\Module::find()->count() . " entries)");
         foreach (models\Module::find()->joinWith('space')->all() as $module) {
             if ($module->space == null) {
-                if ($integrityController->showFix("Deleting space module" . $module->id . " without existing space!")) {
+                if ($integrityController->showFix("Deleting space module " . $module->id . " without existing space!")) {
                     $module->delete();
                 }
             }
@@ -101,12 +103,12 @@ class Events extends \yii\base\Object
         $integrityController->showTestHeadline("Space Module - Memberships (" . models\Membership::find()->count() . " entries)");
         foreach (models\Membership::find()->joinWith('space')->all() as $membership) {
             if ($membership->space == null) {
-                if ($integrityController->showFix("Deleting space membership" . $membership->space_id . " without existing space!")) {
+                if ($integrityController->showFix("Deleting space membership " . $membership->space_id . " without existing space!")) {
                     $membership->delete();
                 }
             }
             if ($membership->user == null) {
-                if ($integrityController->showFix("Deleting space membership" . $membership->user_id . " without existing user!")) {
+                if ($integrityController->showFix("Deleting space membership " . $membership->user_id . " without existing user!")) {
                     $membership->delete();
                 }
             }

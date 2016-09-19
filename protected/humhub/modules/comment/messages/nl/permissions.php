@@ -17,6 +17,10 @@
  * NOTE: this file must be saved in UTF-8 encoding.
  */
 return [
-    'Allows the user to add comments' => '',
-    'Create comment' => '',
+    'Allows the user to create posts' => '',
+    'Can manage (e.g. archive, stick or delete) arbitrary content' => '',
+    'Create post' => '',
+    'Manage content' => '',
+    'Allows the user to add comments' => 'Sta gebruikers toe om reacties achter te laten',
+    'Create comment' => 'Maak reactie',
 ];

@@ -3,6 +3,7 @@
 namespace humhub\modules\space\models;
 
 use Yii;
+use humhub\modules\user\models\User;
 use humhub\modules\content\models\WallEntry;
 use humhub\modules\activity\models\Activity;
 use humhub\modules\comment\models\Comment;
@@ -17,6 +18,7 @@ use humhub\modules\comment\models\Comment;
  * @property string $request_message
  * @property string $last_visit
  * @property integer $show_at_dashboard
+ * @property boolean $can_leave
  * @property string $group_id
  * @property string $created_at
  * @property integer $created_by
@@ -67,6 +69,7 @@ class Membership extends \yii\db\ActiveRecord
             'created_by' => Yii::t('SpaceModule.models_Membership', 'Created By'),
             'updated_at' => Yii::t('SpaceModule.models_Membership', 'Updated At'),
             'updated_by' => Yii::t('SpaceModule.models_Membership', 'Updated By'),
+            'can_leave' => 'Can Leave',
         ];
     }
 
@@ -116,8 +119,6 @@ class Membership extends \yii\db\ActiveRecord
         $query->andWhere(['wall_entry.wall_id' => $this->space->wall_id]);
         $query->andWhere(['>', 'wall_entry.created_at', $this->last_visit]);
         $count = $query->count();
-
-        $count += Comment::find()->where(['space_id' => $this->space_id])->andWhere(['>', 'created_at', $this->last_visit])->count();
         return $count;
     }
 
@@ -136,7 +137,7 @@ class Membership extends \yii\db\ActiveRecord
         $spaces = Yii::$app->cache->get($cacheId);
         if ($spaces === false) {
 
-            $orderSetting = \humhub\models\Setting::Get('spaceOrder', 'space');
+            $orderSetting = Yii::$app->getModule('space')->settings->get('spaceOrder');
             $orderBy = 'name ASC';
             if ($orderSetting != 0) {
                 $orderBy = 'last_visit DESC';
@@ -152,6 +153,46 @@ class Membership extends \yii\db\ActiveRecord
         return $spaces;
     }
 
+    /**
+     * Returns Space for user space membership
+     *
+     * @since 1.0
+     * @param \humhub\modules\user\models\User $user
+     * @param boolean $memberOnly include only member status - no pending/invite states
+     * @return \yii\db\ActiveQuery for space model
+     */
+    public static function getUserSpaceQuery($user, $memberOnly = true)
+    {
+        $query = Space::find();
+        $query->leftJoin('space_membership', 'space_membership.space_id=space.id and space_membership.user_id=:userId', [':userId' => $user->id]);
 
+        if ($memberOnly) {
+            $query->andWhere(['space_membership.status' => self::STATUS_MEMBER]);
+        }
+
+        $query->orderBy(['name' => SORT_ASC]);
+
+        return $query;
+    }
+
+    /**
+     * Returns a user query for space memberships
+     * 
+     * @since 1.1
+     * @param Space $space
+     * @param boolean $membersOnly Only return approved members
+     * @return \humhub\modules\user\components\ActiveQueryUser
+     */
+    public static function getSpaceMembersQuery($space, $membersOnly = true)
+    {
+        $query = User::find()->active();
+        $query->join('LEFT JOIN', 'space_membership', 'space_membership.user_id=user.id');
+        if ($membersOnly) {
+            $query->andWhere(['space_membership.status' => self::STATUS_MEMBER]);
+        }
+        $query->andWhere(['space_id' => $space->id]);
+        $query->defaultOrder();
+        return $query;
+    }
 
 }

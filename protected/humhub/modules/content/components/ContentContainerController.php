@@ -18,10 +18,10 @@ use humhub\modules\user\models\User;
  * ContainerController is the base controller for all space or user profile controllers.
  *
  * It automatically detects the Container by request parameters.
- * Use [[ContentContainerActiveCreated::createUrl]] method to generate URLs. 
- * 
+ * Use [[ContentContainerActiveCreated::createUrl]] method to generate URLs.
+ *
  * e.g. $this->contentContainer->createUrl();
- * 
+ *
  * Depends on the loaded the Container Type a Behavior with additional methods will be attached.
  * - Space  \humhub\modules\space\behaviors\SpaceController
  * - User attached Behavior: \humhub\modules\user\behaviors\ProfileController
@@ -55,11 +55,6 @@ class ContentContainerController extends Controller
      */
     public function init()
     {
-        // Directly redirect guests to login page - if guest access isn't enabled
-        if (Yii::$app->user->isGuest && \humhub\models\Setting::Get('allowGuestAccess', 'authentication_internal') != 1) {
-            return Yii::$app->user->loginRequired();
-        }
-
         $spaceGuid = Yii::$app->request->get('sguid', '');
         $userGuid = Yii::$app->request->get('uguid', '');
 
@@ -104,11 +99,30 @@ class ContentContainerController extends Controller
         }
 
         if (!$this->checkModuleIsEnabled()) {
-            throw new HttpException(405, Yii::t('base', 'Module is not on this content container enabled!'));
+            throw new HttpException(405, Yii::t('base', 'Module is not enabled on this content container!'));
         }
 
-
         return parent::init();
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function beforeAction($action)
+    {
+
+        if (parent::beforeAction($action)) {
+
+            // Directly redirect guests to login page - if guest access isn't enabled
+            if (Yii::$app->user->isGuest && Yii::$app->getModule('user')->settings->get('auth.allowGuestAccess') != 1) {
+                Yii::$app->user->loginRequired();
+                return false;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -125,7 +139,7 @@ class ContentContainerController extends Controller
 
     /**
      * Checks if current module is enabled on this content container.
-     * 
+     *
      * @todo Also support submodules
      * @return boolean is current module enabled
      */

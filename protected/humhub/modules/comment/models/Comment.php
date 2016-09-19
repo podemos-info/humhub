@@ -18,7 +18,6 @@ use humhub\modules\content\components\ContentAddonActiveRecord;
  * @property integer $id
  * @property string $message
  * @property integer $object_id
- * @property integer $space_id
  * @property string $object_model
  * @property string $created_at
  * @property integer $created_by
@@ -49,8 +48,8 @@ class Comment extends ContentAddonActiveRecord
     public function rules()
     {
         return array(
-            array(['created_by', 'updated_by', 'space_id'], 'integer'),
-            array(['message', 'created_at', 'space_id', 'updated_at'], 'safe'),
+            array(['created_by', 'updated_by'], 'integer'),
+            array(['message', 'created_at', 'updated_at'], 'safe'),
         );
     }
 
@@ -68,7 +67,7 @@ class Comment extends ContentAddonActiveRecord
      */
     public function afterDelete()
     {
-        
+
         try {
             $this->updateContentSearch();
         } catch (\yii\base\Exception $ex) {
@@ -151,7 +150,7 @@ class Comment extends ContentAddonActiveRecord
             $query->joinWith('user');
 
             $comments = $query->all();
-            Yii::$app->cache->set($cacheID, $comments, \humhub\models\Setting::Get('expireTime', 'cache'));
+            Yii::$app->cache->set($cacheID, $comments, Yii::$app->settings->get('cache.expireTime'));
         }
 
         return $comments;
@@ -171,7 +170,7 @@ class Comment extends ContentAddonActiveRecord
 
         if ($commentCount === false) {
             $commentCount = Comment::find()->where(['object_model' => $model, 'object_id' => $id])->count();
-            Yii::$app->cache->set($cacheID, $commentCount, \humhub\models\Setting::Get('expireTime', 'cache'));
+            Yii::$app->cache->set($cacheID, $commentCount, Yii::$app->settings->get('cache.expireTime'));
         }
 
         return $commentCount;
@@ -182,7 +181,7 @@ class Comment extends ContentAddonActiveRecord
      */
     public function getContentName()
     {
-        return Yii::t('CommentModule.models_comment', 'Comment');
+        return Yii::t('CommentModule.models_comment', 'comment');
     }
 
     /**
