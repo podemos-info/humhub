@@ -1,6 +1,8 @@
 HumHub - Social Network Kit
 ===========================
 
+DEPRECATED!!! -> Usamos las release oficiales sin composer, que pedia para actualizarse subscripcion a un packagist privado, ademas no aportamos nada nuevo al repositorio original.
+
 [![Build Status](https://travis-ci.org/humhub/humhub.svg?branch=master)](https://travis-ci.org/humhub/humhub)
 [![Yii2](https://img.shields.io/badge/Powered_by-Yii_Framework-green.svg?style=flat)](http://www.yiiframework.com/)
 
